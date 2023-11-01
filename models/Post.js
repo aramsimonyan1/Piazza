@@ -23,4 +23,4 @@ const PostSchema = mongoose.Schema({
     }
 })
 
-module.exports = mongoose.model('posts',PostSchema) // the name 'posts' should match the name of database collection in MongoDB
+module.exports = mongoose.model('posts', PostSchema) // exporting and mapping the posts schema

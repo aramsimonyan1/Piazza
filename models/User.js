@@ -1,5 +1,6 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose') // variable mongoose requires the mongoose package
 
+//creating a user schema that is mongoose schema
 const userSchema = mongoose.Schema({
     username:{
         type:String,
@@ -24,4 +25,4 @@ const userSchema = mongoose.Schema({
         default:Date.now
     }
 })
-module.exports=mongoose.model('users',userSchema)
+module.exports=mongoose.model('users', userSchema)
