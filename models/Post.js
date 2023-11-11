@@ -44,37 +44,31 @@ const PostSchema = mongoose.Schema({
         type: Number,
         default: 0
     },
-    comments: [{
-        user: {
-            type: String,
-            required: true
-        },
-        text: {
-            type: String,
-            required: true
-        },
-        timestamp: {
-            type: Date,
-            default: Date.now
-        }
-    }],
     interactions: [{
-        userId: {
-            type: String,
+        interactionTime: {
+            type: Date,
+            default: Date.now,
             required: true,
         },
-        userName:{
-            type: String,
-        },
-        interaction: {
+        interactionType: {
             type: String,
             enum: ['like', 'dislike', 'comment'],
             required: true,
         },
-        timeLeft: {
-            type: Number, // You can adjust the data type based on your requirements
+        userId: {
+            type: String,
             required: true,
         },
+        userName: {
+            type: String,
+            required: true,
+        },
+        text: {
+            type: String,
+        },
+        postExpiresIn: {
+            type: String, // in minutes
+        }
     }],
 })
 

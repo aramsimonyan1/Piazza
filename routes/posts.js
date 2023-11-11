@@ -4,28 +4,30 @@ const router = express.Router()
 const mongoose = require('mongoose')
 
 const Post = require('../models/Post')
-//const { text } = require('body-parser')  <= unauthorised users can post
-const verifyToken = require('../verifyToken')
+const verifyToken = require('../verifyToken') // using:  const { text } = require('body-parser')   also unauthorised users could post
 
-// POST (this method Create data in MongoDB based on what user gives us)
+// POST (this method creates data/post in MongoDB based on what user gives us)
 router.post('/', verifyToken, async(req, res) => {
-    const { user, title, topics, text, duration } = req.body
+    const { title, topics, text, duration } = req.body
     const currentTime = new Date()
 
     // Calculate the expiration time based on the current time and duration.
-    const expirationTime = new Date(currentTime.getTime() + duration * 60000) // Convert minutes to milliseconds
+    const expirationTime = new Date(currentTime.getTime() + duration * 60000) //  It's essential to multiply duration by 60000 to convert it to milliseconds before adding it to the current time.
 
-    const postData = new Post ({ // creating json object for a database
-        user:user,
-        title:title,
-        topics:topics,
-        text:text,
-        duration:duration,
-        expirationTime:expirationTime,
+    // Extract user information from the authenticated token which includes the username (name).
+    const { _id, name } = req.user
+
+    // Creating json object for a database
+    const postData = new Post ({ 
+        user: name, // Use the username from the authenticated token
+        title: title,
+        topics: topics,
+        text: text,
+        duration: duration,
+        expirationTime: expirationTime,
         status: 'Live',
     })
 
-    //try to insert...
     try {
         const postToSave = await postData.save() 
         res.send(postToSave)                  
@@ -40,9 +42,6 @@ router.post('/like/:postId', verifyToken, async (req, res) => {
     const { postId } = req.params
 
     try {
-            // Log the content of req.user for debugging
-            console.log('User Information:', req.user);
-
         const post = await Post.findById(postId) // fetches the post by its ID
 
         if (!post) {
@@ -50,9 +49,11 @@ router.post('/like/:postId', verifyToken, async (req, res) => {
         }
 
         const currentTime = new Date()
-        //const expirationTime = new Date(post.createdAt.getTime() + post.duration * 60000); // Convert minutes to milliseconds
+        const postExpiresInMinutes = Math.floor((post.expirationTime - currentTime) / 60000)
+        const postExpiresInSeconds = Math.floor(((post.expirationTime - currentTime) % 60000) / 1000)
+        const friendlyFormat = `${postExpiresInMinutes} minutes and ${postExpiresInSeconds} seconds`
 
-        //Check wether the expirationTime of a post object retrieved from the database has passed.
+        // Check wether the expirationTime of a post object retrieved from the database has passed.
         if (currentTime > post.expirationTime) {
             return res.status(403).send({message: 'Post has expired; no further interactions allowed'})
         }
@@ -61,15 +62,13 @@ router.post('/like/:postId', verifyToken, async (req, res) => {
         post.likes += 1
 
         // Record user interaction data with a post
-        const interactionData = {
+        post.interactions.push({
+            interactionTime: currentTime,
+            interactionType: 'like',
             userId: req.user._id, // we have user data in the request (from token)
             userName: req.user.name, 
-            interaction: 'like',
-            timeLeft: post.expirationTime - currentTime, // Time left for the post to expire
-        };
-
-        console.log('Interaction Data:', interactionData);
-        post.interactions.push(interactionData);
+            postExpiresIn: friendlyFormat,
+        })
 
         await post.save()
 
@@ -82,7 +81,7 @@ router.post('/like/:postId', verifyToken, async (req, res) => {
 
 
 // POST (This method allows authorised users to dislike a post)
-router.post('/dislike/:postId', verifyToken, async (req, res) => {
+router.post('/dislike/:postId', verifyToken, async(req, res) => {
     const { postId } = req.params
 
     try {
@@ -90,30 +89,32 @@ router.post('/dislike/:postId', verifyToken, async (req, res) => {
         console.log('User Information:', req.user);
         
         const post = await Post.findById(postId) // fetches the post by its ID
-
         if (!post) {
             return res.status(404).send({message: 'Post not found'})
         }
 
         const currentTime = new Date()
+        const postExpiresInMinutes = Math.floor((post.expirationTime - currentTime) / 60000)
+        const postExpiresInSeconds = Math.floor(((post.expirationTime - currentTime) % 60000) / 1000)
+        const friendlyFormat = `${postExpiresInMinutes} minutes and ${postExpiresInSeconds} seconds`
 
-        //The post object retrieved from the database should include the expirationTime stored in the PostSchema
+        // Check wether the expirationTime of a post object retrieved from the database has passed.
         if (currentTime > post.expirationTime) {
             return res.status(403).send({message: 'Post has expired; no further interactions allowed'})
         }
 
-        // Perform the "dislike" operation on the post.
+        // "dislike" operation on the post.
         post.dislikes += 1
         
         // Record user interaction data with a post
         const interactionData = {
+            interactionTime: currentTime,
+            interactionType: 'dislike',
             userId: req.user._id, // we have user data in the request (from token)
             userName: req.user.name, 
-            interaction: 'dislike',
-            timeLeft: post.expirationTime - currentTime, // Time left for the post to expire
-        };
-
-        post.interactions.push(interactionData);
+            postExpiresIn: friendlyFormat // Time left for the post to expire
+        }
+        post.interactions.push(interactionData)
         
         await post.save()
 
@@ -122,6 +123,49 @@ router.post('/dislike/:postId', verifyToken, async (req, res) => {
         res.status(500).send({message: err})
     }
 })
+
+
+
+// POST (This method allows authorised users to comment on a post)
+router.post('/comment/:postId', verifyToken, async (req, res) => {
+    const { postId } = req.params;
+    const { text } = req.body;
+
+    try {
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).send({ message: 'Post not found' });
+        }
+
+        const currentTime = new Date()
+        const postExpiresInMinutes = Math.floor((post.expirationTime - currentTime) / 60000)
+        const postExpiresInSeconds = Math.floor(((post.expirationTime - currentTime) % 60000) / 1000)
+        const friendlyFormat = `${postExpiresInMinutes} minutes and ${postExpiresInSeconds} seconds`
+
+        // Check if the post has expired
+        if (currentTime > post.expirationTime) {
+            return res.status(403).send({ message: 'Post has expired; no further interactions allowed' });
+        }
+
+        // Record user interaction data with a post
+        post.interactions.push({
+            interactionTime: currentTime,
+            interactionType: 'comment',
+            userId: req.user._id,
+            userName: req.user.name,
+            text: text,
+            postExpiresIn: friendlyFormat, // Time left for the main post to expire
+        });
+
+        await post.save();
+
+        res.send({ message: 'Comment added successfully' });
+    } catch (err) {
+        res.status(500).send({ message: err });
+    }
+});
+
 
 
 

@@ -14,7 +14,6 @@ function auth(req, res, next){
             name: verified.username,
           }    
 
-        console.log('User Information:', req.user) // this added 11.11.2023 02:08
         next()
     }catch(err){
         return res.status(401).send({ message:'Invalid token' })
