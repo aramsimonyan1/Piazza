@@ -9,7 +9,6 @@ const verifyToken = require('../verifyToken')
 
 // POST (this method Create data in MongoDB based on what user gives us)
 router.post('/', verifyToken, async(req, res) => {
-
     const { user, title, topics, text, duration } = req.body
     const currentTime = new Date()
 

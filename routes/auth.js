@@ -51,9 +51,9 @@ router.post('/login', async(req, res)=>{
     }
 
     // Validation2 to check if the user exists
-    const user = await User.findOne({email:req.body.email})
+    const user = await User.findOne({email:req.body.email, username:req.body.username})
     if(!user){
-        return res.status(400).send({message:'The email address is not registered in database'})
+        return res.status(400).send({message:'The email address and/or username is not registered in database'})
     }
 
     // Validation 3 to check if the password is correct
@@ -63,7 +63,8 @@ router.post('/login', async(req, res)=>{
     }
     
     // Generate an authentication token for a user based on the user id 
-    const token = jsonwebtoken.sign({_id:user._id}, process.env.TOKEN_SECRET)
+    //line below replaced 11/11/2023 12:13 this line:  const token = jsonwebtoken.sign({_id:user._id}, process.env.TOKEN_SECRET)
+    const token = jsonwebtoken.sign({ _id:user._id, username:user.username }, process.env.TOKEN_SECRET)
     res.header('auth-token', token).send({'auth-token':token})
 })
 module.exports = router
