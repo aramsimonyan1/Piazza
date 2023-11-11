@@ -33,6 +33,7 @@ const PostSchema = mongoose.Schema({
     status: {
         type: String,
         enum: ['Live', 'Expired'],
+        default: 'Live', // two values allowed but the default is Live
         required: true
     },
     likes: {
@@ -56,7 +57,25 @@ const PostSchema = mongoose.Schema({
             type: Date,
             default: Date.now
         }
-    }]
+    }],
+    interactions: [{
+        userId: {
+            type: String,
+            required: true,
+        },
+        userName:{
+            type: String,
+        },
+        interaction: {
+            type: String,
+            enum: ['like', 'dislike', 'comment'],
+            required: true,
+        },
+        timeLeft: {
+            type: Number, // You can adjust the data type based on your requirements
+            required: true,
+        },
+    }],
 })
 
 module.exports = mongoose.model('posts', PostSchema) // exporting and mapping the posts schema

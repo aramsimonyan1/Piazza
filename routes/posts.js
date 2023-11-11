@@ -36,11 +36,14 @@ router.post('/', verifyToken, async(req, res) => {
 })
 
 
-// POST like
+// POST (This method allows authorised users to like a post)
 router.post('/like/:postId', verifyToken, async (req, res) => {
     const { postId } = req.params
 
     try {
+            // Log the content of req.user for debugging
+            console.log('User Information:', req.user);
+
         const post = await Post.findById(postId) // fetches the post by its ID
 
         if (!post) {
@@ -50,13 +53,25 @@ router.post('/like/:postId', verifyToken, async (req, res) => {
         const currentTime = new Date()
         //const expirationTime = new Date(post.createdAt.getTime() + post.duration * 60000); // Convert minutes to milliseconds
 
-        //The post object retrieved from the database should include the expirationTime stored in the PostSchema
+        //Check wether the expirationTime of a post object retrieved from the database has passed.
         if (currentTime > post.expirationTime) {
             return res.status(403).send({message: 'Post has expired; no further interactions allowed'})
         }
 
-        // Perform the "like" operation on the post.
+        // "like" operation on the post.
         post.likes += 1
+
+        // Record user interaction data with a post
+        const interactionData = {
+            userId: req.user._id, // we have user data in the request (from token)
+            userName: req.user.name, 
+            interaction: 'like',
+            timeLeft: post.expirationTime - currentTime, // Time left for the post to expire
+        };
+
+        console.log('Interaction Data:', interactionData);
+        post.interactions.push(interactionData);
+
         await post.save()
 
         res.send({message: 'Post liked successfully'})
@@ -64,6 +79,51 @@ router.post('/like/:postId', verifyToken, async (req, res) => {
         res.status(500).send({message: err})
     }
 })
+
+
+
+// POST (This method allows authorised users to dislike a post)
+router.post('/dislike/:postId', verifyToken, async (req, res) => {
+    const { postId } = req.params
+
+    try {
+        // Log the content of req.user for debugging
+        console.log('User Information:', req.user);
+        
+        const post = await Post.findById(postId) // fetches the post by its ID
+
+        if (!post) {
+            return res.status(404).send({message: 'Post not found'})
+        }
+
+        const currentTime = new Date()
+
+        //The post object retrieved from the database should include the expirationTime stored in the PostSchema
+        if (currentTime > post.expirationTime) {
+            return res.status(403).send({message: 'Post has expired; no further interactions allowed'})
+        }
+
+        // Perform the "dislike" operation on the post.
+        post.dislikes += 1
+        
+        // Record user interaction data with a post
+        const interactionData = {
+            userId: req.user._id, // we have user data in the request (from token)
+            userName: req.user.name, 
+            interaction: 'dislike',
+            timeLeft: post.expirationTime - currentTime, // Time left for the post to expire
+        };
+
+        post.interactions.push(interactionData);
+        
+        await post.save()
+
+        res.send({message: 'Post disliked successfully'})
+    } catch (err) {
+        res.status(500).send({message: err})
+    }
+})
+
 
 
 // GET 1  (Read all)
