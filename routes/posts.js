@@ -8,11 +8,11 @@ const verifyToken = require('../verifyToken') // using:  const { text } = requir
 
 // POST (this method creates data/post in MongoDB based on what user gives us)
 router.post('/', verifyToken, async(req, res) => {
-    const { title, topics, text, duration } = req.body
+    const { title, topics, text, expirTimeInMin } = req.body
+    
     const currentTime = new Date()
-
-    // Calculate the expiration time based on the current time and duration.
-    const expirationTime = new Date(currentTime.getTime() + duration * 60000) //  It's essential to multiply duration by 60000 to convert it to milliseconds before adding it to the current time.
+    // Calculate the expiration time based on the current time and expirTimeInMin.
+    const expirationTime = new Date(currentTime.getTime() + expirTimeInMin * 60000) //  It's essential to multiply expirTimeInMin by 60000 to convert it to milliseconds before adding it to the current time.
 
     // Extract user information from the authenticated token which includes the username (name).
     const { _id, name } = req.user
@@ -20,10 +20,11 @@ router.post('/', verifyToken, async(req, res) => {
     // Creating json object for a database
     const postData = new Post ({ 
         user: name, // Use the username from the authenticated token
+        userId: _id,
         title: title,
         topics: topics,
         text: text,
-        duration: duration,
+        expirTimeInMin: expirTimeInMin,
         expirationTime: expirationTime,
         status: 'Live',
     })
@@ -37,7 +38,8 @@ router.post('/', verifyToken, async(req, res) => {
 })
 
 
-// POST (This method allows authorised users to like a post)
+
+// POST like (This method allows authorised users to like a post)
 router.post('/like/:postId', verifyToken, async (req, res) => {
     const { postId } = req.params
 
@@ -49,13 +51,19 @@ router.post('/like/:postId', verifyToken, async (req, res) => {
         }
 
         const currentTime = new Date()
+        // Calculating the time left for main post to expire to be presented in format that it easy to uderstand.
         const postExpiresInMinutes = Math.floor((post.expirationTime - currentTime) / 60000)
         const postExpiresInSeconds = Math.floor(((post.expirationTime - currentTime) % 60000) / 1000)
         const friendlyFormat = `${postExpiresInMinutes} minutes and ${postExpiresInSeconds} seconds`
 
-        // Check wether the expirationTime of a post object retrieved from the database has passed.
-        if (currentTime > post.expirationTime) {
+        // Check whether the expirationTime of a post object retrieved from the database has passed.
+        if (currentTime > post.expirationTime) {   // when condition is true: below message and 403 Forbidden response is sent.
             return res.status(403).send({message: 'Post has expired; no further interactions allowed'})
+        }
+
+        // Check if the user is trying to like their own post
+        if (post.userId.toString() === req.user._id.toString()) {
+            return res.status(403).send({ message: 'Users cannot like their own posts' });
         }
 
         // "like" operation on the post.
@@ -67,39 +75,37 @@ router.post('/like/:postId', verifyToken, async (req, res) => {
             interactionType: 'like',
             userId: req.user._id, // we have user data in the request (from token)
             userName: req.user.name, 
-            postExpiresIn: friendlyFormat,
+            postExpiresIn: friendlyFormat // Time left for the main post to expire (calculated above) presented in format that it easy to uderstand
         })
 
         await post.save()
-
-        res.send({message: 'Post liked successfully'})
+        res.send({ message: 'Post liked successfully' })
     } catch (err) {
-        res.status(500).send({message: err})
+        console.error(err); // Log the error to the console for debugging
+        res.status(500).send({ message: 'Internal Server Error' })
     }
 })
 
 
 
-// POST (This method allows authorised users to dislike a post)
+// POST dislike (This method allows authorised users to dislike a post)
 router.post('/dislike/:postId', verifyToken, async(req, res) => {
     const { postId } = req.params
 
-    try {
-        // Log the content of req.user for debugging
-        console.log('User Information:', req.user);
-        
+    try {        
         const post = await Post.findById(postId) // fetches the post by its ID
         if (!post) {
             return res.status(404).send({message: 'Post not found'})
         }
 
         const currentTime = new Date()
+        // Calculating the time left for main post to expire to be presented in format that it easy to uderstand.
         const postExpiresInMinutes = Math.floor((post.expirationTime - currentTime) / 60000)
         const postExpiresInSeconds = Math.floor(((post.expirationTime - currentTime) % 60000) / 1000)
         const friendlyFormat = `${postExpiresInMinutes} minutes and ${postExpiresInSeconds} seconds`
 
         // Check wether the expirationTime of a post object retrieved from the database has passed.
-        if (currentTime > post.expirationTime) {
+        if (currentTime > post.expirationTime) {   // When condition is true: below message and 403 Forbidden response is sent.
             return res.status(403).send({message: 'Post has expired; no further interactions allowed'})
         }
 
@@ -112,13 +118,12 @@ router.post('/dislike/:postId', verifyToken, async(req, res) => {
             interactionType: 'dislike',
             userId: req.user._id, // we have user data in the request (from token)
             userName: req.user.name, 
-            postExpiresIn: friendlyFormat // Time left for the post to expire
+            postExpiresIn: friendlyFormat // Time left for the main post to expire (calculated above) presented in format that it easy to uderstand
         }
         post.interactions.push(interactionData)
-        
         await post.save()
-
         res.send({message: 'Post disliked successfully'})
+
     } catch (err) {
         res.status(500).send({message: err})
     }
@@ -126,7 +131,7 @@ router.post('/dislike/:postId', verifyToken, async(req, res) => {
 
 
 
-// POST (This method allows authorised users to comment on a post)
+// POST comment (This method allows authorised users to comment on a post)
 router.post('/comment/:postId', verifyToken, async (req, res) => {
     const { postId } = req.params;
     const { text } = req.body;
@@ -139,12 +144,13 @@ router.post('/comment/:postId', verifyToken, async (req, res) => {
         }
 
         const currentTime = new Date()
+        // Calculating the time left for main post to expire to be presented in format that it easy to uderstand.
         const postExpiresInMinutes = Math.floor((post.expirationTime - currentTime) / 60000)
         const postExpiresInSeconds = Math.floor(((post.expirationTime - currentTime) % 60000) / 1000)
         const friendlyFormat = `${postExpiresInMinutes} minutes and ${postExpiresInSeconds} seconds`
 
-        // Check if the post has expired
-        if (currentTime > post.expirationTime) {
+        // Check wether the expirationTime of a post object retrieved from the database has passed.
+        if (currentTime > post.expirationTime) {  // // When condition is true: below message and 403 Forbidden response is sent.
             return res.status(403).send({ message: 'Post has expired; no further interactions allowed' });
         }
 
@@ -155,7 +161,7 @@ router.post('/comment/:postId', verifyToken, async (req, res) => {
             userId: req.user._id,
             userName: req.user.name,
             text: text,
-            postExpiresIn: friendlyFormat, // Time left for the main post to expire
+            postExpiresIn: friendlyFormat, // Time left for the main post to expire (calculated above) presented in format that it easy to uderstand
         });
 
         await post.save();
@@ -168,19 +174,32 @@ router.post('/comment/:postId', verifyToken, async (req, res) => {
 
 
 
-
-// GET 1  (Read all)
+// GET1  (Read all)
 router.get('/', verifyToken, async(req, res) => {
-    // Post is a model name from line 4.  // if it works send the posts back 
     try {
-        const getPosts = await Post.find().limit(10)  
+        const getPosts = await Post.find().limit(10)   // Post is a model name from line 6.
         res.send(getPosts)                
     }catch(err){
         res.status(400).send({message:err})
     }
 })
 
-// GET 2  (Read by ID)
+
+
+// GET2 (the endpoint '/bytopic/:topic' for reading posts by topic)
+router.get('/bytopic/:topic', verifyToken, async (req, res) => {  // :topic is a route parameter representing the topic.
+    const { topic } = req.params 
+    try {
+        const postsByTopic = await Post.find({ topics: topic }).limit(5) // search result limit is used to limit the number of returned posts to 5
+        res.send(postsByTopic)
+    } catch (err) {
+        res.status(400).send({ message: err })
+    }
+})
+
+
+
+// GET3 (Read by post ID)
 router.get('/:postId', verifyToken, async(req, res) => { 
     try {
         const getPostById = await Post.findById(req.params.postId) 
@@ -190,6 +209,8 @@ router.get('/:postId', verifyToken, async(req, res) => {
     }
 
 })
+
+
 
 // PATCH (get the post id from the user, match with post id in database and set/update the post data as stated
 router.patch('/:postId', verifyToken, async(req, res) => {
@@ -208,6 +229,8 @@ router.patch('/:postId', verifyToken, async(req, res) => {
         res.send({message:err})
     }
 })
+
+
 
 // DELETE (Delete) a post by its id
 router.delete('/:postId', verifyToken, async(req, res) => {

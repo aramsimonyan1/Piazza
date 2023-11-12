@@ -5,6 +5,9 @@ const PostSchema = mongoose.Schema({
         type: String,
         required: true
     },
+    userId: {
+        type: String,
+    },
     title: {
         type: String,
         required: true
@@ -22,8 +25,8 @@ const PostSchema = mongoose.Schema({
         type: String,
         required: true
     },
-    duration: {
-        type: Number, // Represents the duration in minutes
+    expirTimeInMin: {
+        type: Number, // post expiration time in minutes
         required: true,
     },
     expirationTime: {
@@ -67,7 +70,7 @@ const PostSchema = mongoose.Schema({
             type: String,
         },
         postExpiresIn: {
-            type: String, // in minutes
+            type: String, // minutes and seconds casted into String
         }
     }],
 })

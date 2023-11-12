@@ -17,3 +17,20 @@ Nie wiem czy post powinien dodac post do bazy jezeli do stworzenia postu podaje 
 Patch: dziala przy auth-token (jak ni)
 Delete: dziala przy auth-token (otherwise Access denied / Invalid token)
 Delete: jak jest incorrect id it shows error
+
+
+ "username": "Mary",
+ "email": "mary@cloud.com",
+ "password": "mary123"
+
+ "username": "Olga",
+ "email": "olga@cloud.com",
+ "password": "olga123"
+
+ "username": "Nick",
+ "email": "nick@cloud.com",
+ "password": "nick123"
+
+ "username": Nestor
+ "email": "nestor@cloud.com
+ "password": "N12345"

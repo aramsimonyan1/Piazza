@@ -10,13 +10,13 @@ app.use(bodyParser.json())
 const postsRoute = require('./routes/posts')
 const authRoute = require('./routes/auth')
 
-app.use('/api/post',postsRoute)
-app.use('/api/user',authRoute)
+app.use('/api/post', postsRoute)
+app.use('/api/user', authRoute)
 
-mongoose.connect(process.env.DB_CONNECTOR).then(()=>{ // connecting to .env file
+mongoose.connect(process.env.DB_CONNECTOR).then(() => { // connecting to .env file
     console.log('DB is connected')
 })
 
-app.listen(3000, ()=>{
+app.listen(3000, () => {
     console.log('server is running')
 })
