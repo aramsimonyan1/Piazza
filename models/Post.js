@@ -47,6 +47,10 @@ const PostSchema = mongoose.Schema({
         type: Number,
         default: 0
     },
+    interestScore: {
+        type: Number, // This field represents the sum of likes and dislikes
+        default: 0
+    },
     interactions: [{
         interactionTime: {
             type: Date,
