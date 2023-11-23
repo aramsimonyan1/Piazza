@@ -207,7 +207,7 @@ router.get('/bytopic/:topic', verifyToken, async (req, res) => {
             const postsByTopic = await Post.find(query)
                 .select('-interactions')     // Hide interactions in response (to have clear picture)
                 .sort({ interestScore: -1 }) // Sort in descending order (so the post with max value of InterestScore will be on the top)
-                .limit(1)                    // Show just 1 post (with just highest score)  
+                .limit(1)                    // Show just 1 post (with the highest score)  
 
             res.send(postsByTopic)
         } else {                                         // e.g. with /bytopic/Tech
