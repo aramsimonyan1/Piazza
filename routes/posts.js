@@ -12,14 +12,14 @@ router.post('/', verifyToken, async(req, res) => {
     
     const currentTime = new Date()
     // Calculate the expiration time based on the current time and expirTimeInMin.
-    const expirationTime = new Date(currentTime.getTime() + expirTimeInMin * 60000) // It's essential to multiply expirTimeInMin by 60000 to convert it to milliseconds before adding it to the current time.
+    const expirationTime = new Date(currentTime.getTime() + expirTimeInMin * 60000) // multiply expirTimeInMin by 60000 to convert it to milliseconds before adding it to the current time.
 
-    // Extract user information from the authenticated token which includes the username (name).
+    // Extract user information from the authenticated token which includes the the user's ID (_id) and username (name).
     const { _id, name } = req.user
 
-    // Creating json object for a database
+    // Creating JSON object for the database.
     const postData = new Post ({ 
-        user: name, // Use the username from the authenticated token
+        user: name,
         userId: _id,
         title: title,
         topics: topics,
@@ -30,22 +30,28 @@ router.post('/', verifyToken, async(req, res) => {
     })
 
     try {
+        // Save the post data to the database.
         const postToSave = await postData.save() 
         res.send(postToSave)                  
-    }catch(err){
+    } catch (err) {
         res.send({message:err})
     }
 })
 
 
 
-// POST like (This method allows authorised users to like a post)
+// POST like by post's id: Allows authorised users to like a post
 router.post('/like/:postId', verifyToken, async (req, res) => {
     const { postId } = req.params
 
     try {
-        const post = await Post.findById(postId) // fetches the post by its ID
+        // An attempt to validate whether the provided post ID has a valid format
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(400).send({message: 'Invalid post ID format'})
+        }
 
+        // Check if the the user is trying to delete the post created by other user
+        const post = await Post.findById(postId)
         if (!post) {
             return res.status(404).send({message: 'Post not found'})
         }
@@ -57,17 +63,17 @@ router.post('/like/:postId', verifyToken, async (req, res) => {
         const friendlyFormat = `${postExpiresInMinutes} minutes and ${postExpiresInSeconds} seconds`
 
         // Check whether the expirationTime of a post object retrieved from the database has passed.
-        if (currentTime > post.expirationTime) {   // when condition is true: below message and 403 Forbidden response is sent.
+        if (currentTime > post.expirationTime) {   // when condition is true: below message and status 403 Forbidden is sent.
             return res.status(403).send({message: 'Post has expired; no further interactions allowed'})
         }
 
-        // Check if the user is trying to like their own post
+        // Check if the user is trying to like his/her own post
         if (post.userId.toString() === req.user._id.toString()) {
-            return res.status(403).send({ message: 'Users cannot like their own posts' })
+            return res.status(403).send({message: 'Users cannot like their own posts'})
         }
 
         post.likes += 1           // "like" operation on the post.
-        post.interestScore += 1   // also increase the post interest score used to find the post with highest interest
+        post.interestScore += 1   // also increase the post interest score used to find the post with the highest interest
 
         // Record user interaction data with a post
         post.interactions.push({
@@ -79,23 +85,29 @@ router.post('/like/:postId', verifyToken, async (req, res) => {
         })
 
         await post.save()
-        res.send({ message: req.user.name + ' liked a post by ' + post.user + '.' }) // The response message indicates who liked whose post.
+        res.send({message: req.user.name + ' liked a post by ' + post.user + '.'}) // The response message indicates who liked whose post.
     } catch (err) {
         console.error(err) // Log the error to the console for debugging
-        res.status(500).send({ message: 'Internal Server Error' })
+        res.status(500).send({message: 'Internal Server Error'})
     }
 })
 
 
 
-// POST dislike (This method allows authorised users to dislike a post)
+// POST dislike by post's id: Allows authorised users to dislike a post
 router.post('/dislike/:postId', verifyToken, async(req, res) => {
     const { postId } = req.params
 
-    try {        
-        const post = await Post.findById(postId) // fetches the post by its ID
+    try {
+        // An attempt to validate whether the provided post ID has a valid format
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(400).send({message: 'Invalid post ID format'})
+        }
+        
+        // Fetch the post ID from the database and check if the post exists
+        const post = await Post.findById(postId)
         if (!post) {
-            return res.status(404).send({ message: 'Post not found' })
+            return res.status(404).send({message: 'Post not found'})
         }
 
         const currentTime = new Date()
@@ -105,8 +117,13 @@ router.post('/dislike/:postId', verifyToken, async(req, res) => {
         const friendlyFormat = `${postExpiresInMinutes} minutes and ${postExpiresInSeconds} seconds`
 
         // Check wether the expirationTime of a post object retrieved from the database has passed.
-        if (currentTime > post.expirationTime) {   // When condition is true: below message and 403 Forbidden response is sent.
+        if (currentTime > post.expirationTime) {   // When condition is true: below message and status 403 Forbidden is sent.
             return res.status(403).send({message: 'Post has expired; no further interactions allowed'})
+        }
+
+        // Check if the user is trying to dislike his/her own post
+        if (post.userId.toString() === req.user._id.toString()) {
+            return res.status(403).send({message: 'Users cannot dislike their own posts'})
         }
 
         post.dislikes += 1        // "dislike" operation on the post.
@@ -122,25 +139,30 @@ router.post('/dislike/:postId', verifyToken, async(req, res) => {
         }
         post.interactions.push(interactionData)
         await post.save()
-        res.send({ message: req.user.name + ' disliked a post by ' + post.user + '.' }) // The response message indicates who disliked who's post.
+        res.send({message: req.user.name + ' disliked a post by ' + post.user + '.'}) // The response message indicates who disliked who's post.
 
     } catch (err) {
-        res.status(500).send({ message: err })
+        res.status(500).send({message: err})
     }
 })
 
 
 
-// POST comment (This method allows authorised users to comment on a post)
+// POST comment by post's id: Allows authorised users to comment on a post
 router.post('/comment/:postId', verifyToken, async (req, res) => {
     const { postId } = req.params
     const { text } = req.body
 
     try {
-        const post = await Post.findById(postId)
+        // An attempt to validate whether the provided post ID has a valid format
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(400).send({message: 'Invalid post ID format'})
+        }
 
+        // Fetch the post ID from the database and check if the post exists
+        const post = await Post.findById(postId)
         if (!post) {
-            return res.status(404).send({ message: 'Post not found' })
+            return res.status(404).send({message: 'Post not found'})
         }
 
         const currentTime = new Date()
@@ -149,9 +171,14 @@ router.post('/comment/:postId', verifyToken, async (req, res) => {
         const postExpiresInSeconds = Math.floor(((post.expirationTime - currentTime) % 60000) / 1000)
         const friendlyFormat = `${postExpiresInMinutes} minutes and ${postExpiresInSeconds} seconds`
 
+        // Check if the user is trying to comment their own post
+        if (post.userId.toString() === req.user._id.toString()) {
+            return res.status(403).send({message: 'Users cannot comment their own posts'})
+        }
+
         // Check wether the expirationTime of a post object retrieved from the database has passed.
-        if (currentTime > post.expirationTime) {  // // When condition is true: below message and 403 Forbidden response is sent.
-            return res.status(403).send({ message: 'Post has expired; no further interactions allowed' })
+        if (currentTime > post.expirationTime) {  // If true, it returns a response with a '403 Forbidden' along with a message:
+            return res.status(403).send({message: 'Post has expired; no further interactions allowed'})
         }
 
         // Record user interaction data with a post
@@ -167,9 +194,9 @@ router.post('/comment/:postId', verifyToken, async (req, res) => {
         await post.save()
 
         // The response message indicates who commented on whose post.
-        res.send({ message: req.user.name + ' commented on ' + post.user + "'s post: " + "'" + post.text + "'" }) 
+        res.send({message: req.user.name + ' commented on ' + post.user + "'s post: " + "'" + post.text + "'"}) 
     } catch (err) {
-        res.status(500).send({ message: err })
+        res.status(500).send({message: err})
     }
 })
 
@@ -180,14 +207,14 @@ router.get('/', verifyToken, async(req, res) => {
     try {
         const getPosts = await Post.find().limit(10)   // Post is a model name from line 6.
         res.send(getPosts)                
-    }catch(err){
+    } catch (err) {
         res.status(400).send({message:err})
     }
 })
 
 
 
-// GET (the endpoint '/bytopic/:topic' for reading posts by topic)
+// GET2 (the endpoint '/bytopic/:topic' for reading posts by topic)
 router.get('/bytopic/:topic', verifyToken, async (req, res) => {
     const { topic } = req.params
     const { status, interest } = req.query
@@ -218,7 +245,7 @@ router.get('/bytopic/:topic', verifyToken, async (req, res) => {
         }
     } catch (err) {
         console.error(err)                               // Logs the error to the console
-        res.status(500).send({ message: 'Internal Server Error' }) // and sends a 500 Internal Server Error response with message
+        res.status(500).send({message: 'Internal Server Error'}) // and sends the status 500 Internal Server Error response with message
     }
 })
 
@@ -229,28 +256,49 @@ router.get('/:postId', verifyToken, async(req, res) => {
     try {
         const getPostById = await Post.findById(req.params.postId) 
         res.send(getPostById)                
-    }catch(err){
+    } catch (err) {
         res.status(400).send({message:err})
     }
-
 })
 
 
 
-// PATCH (get the post id from the user, match with post id in database and set/update the post data as stated
+// PATCH (Get the post id from the user, match with post id in database and set/update the post data as stated)
 router.patch('/:postId', verifyToken, async(req, res) => {
-    try{
-        const updatePostById = await Post.updateOne(
-            {_id:req.params.postId},
-            {$set:{
-                user:req.body.user,
-                title:req.body.title,
-                text:req.body.text,
-                location:req.body.location,
+    try {
+        // An attempt to validate whether the provided post ID has a valid format
+        if (!mongoose.Types.ObjectId.isValid(req.params.postId)) {
+            return res.status(400).send({message: 'Invalid post ID format'})
+        }
+
+        // Fetch the post ID from the database and check if the post exists
+        const post = await Post.findById(req.params.postId)
+        if (!post) {
+            return res.status(404).send({message: 'Post not found'})
+        } 
+
+        // Check if the the user is trying to update the post created by other user
+        if (post.userId.toString() !== req.user._id.toString()) {
+            return res.status(403).send({message: 'Users can only update their own posts'})
+        }
+
+        const currentTime = new Date()
+        // Check wether the expirationTime of a post object retrieved from the database has passed.
+        if (post.expirationTime <= currentTime) { // If true, it returns a response with a '403 Forbidden' along with a message:
+            return res.status(403).send({message: 'Post has already expired; no further updates allowed'})
+        }
+
+        // Update the post if it's still active
+        const updatePostById = await Post.updateOne({_id:req.params.postId},
+            {
+                $set:{
+                    title:req.body.title,
+                    topics:req.body.topics,
+                    text:req.body.text,
                 }
             })
         res.send(updatePostById)
-    }catch(err){
+    } catch (err) {
         res.send({message:err})
     }
 })
@@ -260,20 +308,35 @@ router.patch('/:postId', verifyToken, async(req, res) => {
 // DELETE (Delete) a post by its id
 router.delete('/:postId', verifyToken, async(req, res) => {
     const { postId } = req.params
-
-    if (!mongoose.Types.ObjectId.isValid(postId)) {
-        return res.status(400).send({message: 'Invalid post ID format'})
-    }
     
-    try{
-        const deletePostById = await Post.deleteOne({_id: postId})
-        if (deletePostById.n === 0) {
-            // No documents were deleted, which means the post was not found.
-            return res.status(404).send({message: 'Post not found'})
+    try {
+        // An attempt to validate whether the provided post ID has a valid format
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(400).send({message: 'Invalid post ID format'})
         }
-        res.send(deletePostById)
-    }catch(err){
-        res.status(500).send({message:err})
+
+        // Fetch the post ID from the database and check if the post exists
+        const post = await Post.findById(postId)
+        if (!post) {
+            return res.status(404).send({message: 'Post not found'})
+        }        
+
+        // Check if the the user is trying to delete the post created by other user
+        if (post.userId.toString() !== req.user._id.toString()) {
+            return res.status(403).send({message: 'Users can only delete their own posts'})
+        }
+
+        const currentTime = new Date()
+        // Check wether the expirationTime of a post object retrieved from the database has passed.
+        if (post.expirationTime <= currentTime) { // If true, it returns a response with a '403 Forbidden' along with a message:
+            return res.status(403).send({message: 'Post has already expired; delation in not allowed'})
+        }
+
+        // Delete the post
+        await Post.deleteOne({_id: postId})
+        res.send({message: 'Post deleted successfully'})
+    } catch (err) {
+        res.status(500).send({message: err})
     }
 })
 

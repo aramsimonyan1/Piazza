@@ -1,7 +1,6 @@
-// this file will be for authentication and it will be mapped to the api and to the endpoint
+// This file will be for authentication and it will be mapped to the api and to the endpoint
 const express = require('express')
 const router = express.Router()
-
 
 const User = require('../models/User')
 const {registerValidation, loginValidation} = require('../validations/validation')
@@ -9,7 +8,7 @@ const {registerValidation, loginValidation} = require('../validations/validation
 const bcryptjs = require('bcryptjs')
 const jsonwebtoken = require('jsonwebtoken')
 
-router.post('/register', async(req, res)=>{
+router.post('/register', async(req, res) =>{
 
     // Validation1 to check user input based on registerValidation in validation.js
     const {error} = registerValidation(req.body)
@@ -50,8 +49,8 @@ router.post('/login', async(req, res)=>{
         return res.status(400).send({message: error['details'][0]['message']})
     }
 
-    // Validation2 to check if the user exists
-    const user = await User.findOne({email:req.body.email, username:req.body.username})
+    // Validation2 to check if the user and email exists
+    const user = await User.findOne({username:req.body.username, email:req.body.email})
     if(!user){
         return res.status(400).send({message:'The email address and/or username is not registered in database'})
     }
@@ -62,8 +61,7 @@ router.post('/login', async(req, res)=>{
         return res.status(400).send({message:'Incorrect password'})
     }
     
-    // Generate an authentication token for a user based on the user id 
-    //line below replaced 11/11/2023 12:13 this line:  const token = jsonwebtoken.sign({_id:user._id}, process.env.TOKEN_SECRET)
+    // Generate an authentication token (JSON Web Token) for a user based on the user id and username
     const token = jsonwebtoken.sign({ _id:user._id, username:user.username }, process.env.TOKEN_SECRET)
     res.header('auth-token', token).send({'auth-token':token})
 })
