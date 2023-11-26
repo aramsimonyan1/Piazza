@@ -15,7 +15,13 @@ const PostSchema = mongoose.Schema({
     topics: [{
         type: String,
         enum: ['Politics', 'Health', 'Sport', 'Tech'],
-        required: true
+        required: true,
+        validate: {
+            validator: function (v) {
+                return ['Politics', 'Health', 'Sport', 'Tech'].includes(v)
+            },
+            message: 'Invalid topic value',
+        },
     }],
     createdAt: {
         type: Date,
@@ -27,7 +33,7 @@ const PostSchema = mongoose.Schema({
     },
     expirTimeInMin: {
         type: Number, // post expiration time in minutes
-        required: true,
+        required: true
     },
     expirationTime: {
         type: Date,
@@ -55,28 +61,28 @@ const PostSchema = mongoose.Schema({
         interactionTime: {
             type: Date,
             default: Date.now,
-            required: true,
+            required: true
         },
         interactionType: {
             type: String,
             enum: ['like', 'dislike', 'comment'],
-            required: true,
+            required: true
         },
         userId: {
             type: String,
-            required: true,
+            required: true
         },
         userName: {
             type: String,
-            required: true,
+            required: true
         },
         text: {
-            type: String,
+            type: String
         },
         postExpiresIn: {
-            type: String, // minutes and seconds casted into String
+            type: String // minutes and seconds casted into String
         }
-    }],
+    }]
 })
 
 module.exports = mongoose.model('posts', PostSchema) // exporting and mapping the posts schema

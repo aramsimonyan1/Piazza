@@ -254,6 +254,17 @@ router.get('/bytopic/:topic', verifyToken, async (req, res) => {
 // GET3 (Read by post ID)
 router.get('/:postId', verifyToken, async(req, res) => { 
     try {
+        // An attempt to validate whether the provided post ID has a valid format
+        if (!mongoose.Types.ObjectId.isValid(req.params.postId)) {
+            return res.status(400).send({message: 'Invalid post ID format'})
+        }
+
+        // Fetch the post ID from the database and check if the post exists
+        const post = await Post.findById(req.params.postId)
+        if (!post) {
+            return res.status(404).send({message: 'Post not found'})
+        } 
+        
         const getPostById = await Post.findById(req.params.postId) 
         res.send(getPostById)                
     } catch (err) {
@@ -296,7 +307,9 @@ router.patch('/:postId', verifyToken, async(req, res) => {
                     topics:req.body.topics,
                     text:req.body.text,
                 }
-            })
+            },
+            { runValidators: true } 
+        )
         res.send(updatePostById)
     } catch (err) {
         res.send({message:err})
