@@ -265,8 +265,7 @@ router.get('/:postId', verifyToken, async(req, res) => {
             return res.status(404).send({message: 'Post not found'})
         } 
         
-        const getPostById = await Post.findById(req.params.postId) 
-        res.send(getPostById)                
+        res.send(post)                
     } catch (err) {
         res.status(400).send({message:err})
     }
@@ -288,7 +287,7 @@ router.patch('/:postId', verifyToken, async(req, res) => {
             return res.status(404).send({message: 'Post not found'})
         } 
 
-        // Check if the the user is trying to update the post created by other user
+        // Check if the user is the owner of the post being updated
         if (post.userId.toString() !== req.user._id.toString()) {
             return res.status(403).send({message: 'Users can only update their own posts'})
         }
