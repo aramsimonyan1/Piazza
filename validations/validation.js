@@ -1,6 +1,6 @@
 const joi = require('joi')
 
-// Function that accepts data that is given to this function by user, and it will return back the validation applying joi requirements
+// Function accepts data that is given to this function by user, and returns back the validation applying joi requirements
 const registerValidation = (data) => {
     const schemaValidation = joi.object({
         username:joi.string().required().min(3).max(256),
