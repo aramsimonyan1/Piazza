@@ -7,19 +7,22 @@
     • Upload your final scripts and a technical report to describe the functionality of your solution following the guidelines of the coursework brief document.
 
 ## 2. The Piazza system
-You must develop a RESTful SaaS for a Twitter-like system called Piazza. In Piazza, users post messages for a particular topic while others browse posts, e.g., per topic and perform fundamental interactions, including liking, disliking, or adding a comment. You should install, test, and document your developments.
+###
+    You must develop a RESTful SaaS for a Twitter-like system called Piazza. In Piazza, users post messages for a particular topic while others browse posts, 
+    e.g., per topic and perform fundamental interactions, including liking, disliking, or adding a comment. You should install, test, and document your developments.
 
-Piazza should support the following actions.
-Action 1: Authorised users access the Piazza API using the oAuth v2 protocol to perform any interaction.
-Action 2: Authorised users post a message for a particular topic in the Piazza API.
-Action 3: Registered users browse messages per topic using the Piazza API.
-Action 4: Registered users perform basic operations, including “like”, “dislike”, or “comment” a message posted for a topic.
-Action 5: Authorised users could browse for the most active post per topic with the highest likes and dislikes.
-Action 6: Authorised users could browse the history data of expired posts per topic.
+    Piazza should support the following actions.
+    Action 1: Authorised users access the Piazza API using the oAuth v2 protocol to perform any interaction.
+    Action 2: Authorised users post a message for a particular topic in the Piazza API.
+    Action 3: Registered users browse messages per topic using the Piazza API.
+    Action 4: Registered users perform basic operations, including “like”, “dislike”, or “comment” a message posted for a topic.
+    Action 5: Authorised users could browse for the most active post per topic with the highest likes and dislikes.
+    Action 6: Authorised users could browse the history data of expired posts per topic.
 
-You recommended using the Node.js Express package and MongoDB to develop your software
+    You recommended using the Node.js Express package and MongoDB to develop your software
 
 ## 3. Enforcing authentication/verification functionalities
+###
 • Your service should include user management and JWT functionality using NodeJS.
     The JWT will authorise the auctioning RESTful API to store data for authorised users in your database.
     You can use a MongoDB database for storing data required in the coursework, as shown in the labs.
