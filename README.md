@@ -54,6 +54,7 @@
     • Consider the following.
         ¨ Only authorised users should access the API.
         ¨ The API should allow any registered user to perform posts.
+        ¨ Only the post owners can update or delete their posts.
         ¨ You are encouraged to set any other constraints to improve the software's functionality.
         ¨ You are encouraged to improvise and develop any functionality you like.
 
@@ -62,3 +63,4 @@
     Upload your code to a GitHub repo and then deploy it in a Google Cloud VM. 
     Provide a list of commands in the report and screenshots to demonstrate your deployment actions. 
     As an alternative, you can use DockerHub.
+
