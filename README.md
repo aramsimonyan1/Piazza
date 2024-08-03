@@ -1,6 +1,6 @@
 # Cloud Computing Concepts Coursework
 
-## 1. Development of a Cloud Software as a Service
+## 1. Development of a Cloud Software as a Service ###
 The coursework aims to make you apply the concepts and software development methods and frameworks seen in class to develop a Cloud Software as a Service (SaaS).
 ¨ You will need to install, develop, test and deploy a Cloud SaaS in virtualised environments, such as VMs, containers and Kubernetes, as per the guidelines described in this document.
 ¨ Upload your final scripts and a technical report to describe the functionality of your solution following the guidelines of the coursework brief document.
