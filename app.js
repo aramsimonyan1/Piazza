@@ -1,3 +1,5 @@
+// command to run the server: npm start
+// command to manually stop the process: ctrl + c 
 const express = require('express')   // importing an express library
 const app = express()                // creating new app that is an express app
 
